@@ -80,13 +80,18 @@ fn handle_sender(mut stream: TcpStream, state: Arc<Mutex<State>>) -> Result<()> 
 
         let all_string = String::from_utf8_lossy(&buf[..bytes_read]);
 
-        let tasks_string = all_string.split('\n').nth(1).unwrap();
+        let tasks_string = match all_string.split('\n').nth(1) {
+            Some(recieved_tasks_string) => recieved_tasks_string,
+            None => return Ok(()),
+        };
 
-        let tasks: Vec<Task> = serde_json::from_str(&tasks_string).unwrap();
-
-        *locked_state = State { tasks };
-
-        println!("Received tasks: {}", tasks_string);
+        match serde_json::from_str(&tasks_string) {
+            Ok(tasks) => {
+                println!("Received tasks: {}", tasks_string);
+                *locked_state = State { tasks };
+            }
+            Err(error) => println!("Failed to parse tasks: {:?}", error),
+        }
 
         return Ok(());
     }
